@@ -1,0 +1,80 @@
+[
+	{ "keys": ["ctrl+space"], "command": "auto_complete" },
+	{ "keys": ["ctrl+space"], "command": "replace_completion_with_auto_complete", "context":
+		[
+			{ "key": "last_command", "operator": "equal", "operand": "insert_best_completion" },
+			{ "key": "auto_complete_visible", "operator": "equal", "operand": false },
+			{ "key": "setting.tab_completion", "operator": "equal", "operand": true }
+		]
+	},
+	{ "keys": ["j", "j"], "command": "exit_insert_mode",
+		"context":
+		[
+			{ "key": "setting.command_mode", "operand": false },
+			{ "key": "setting.is_widget", "operand": false }
+		]
+	},
+	//{ "keys": ["ctrl+f1"], "command": "py_help" }
+
+	// SublimeRope defaults: http://sublimerope.readthedocs.org/en/latest/key_bindings.html
+	{ "keys": ["ctrl+r", "ctrl+d"], "command": "goto_python_definition", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+h"], "command": "python_get_documentation", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+r"], "command": "python_refactor_rename", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+e"], "command": "python_refactor_extract_method", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+v"], "command": "python_refactor_extract_variable", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+n"], "command": "python_refactor_inline_variable", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+j"], "command": "python_jump_to_global", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+i"], "command": "python_auto_import", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+c"], "command": "python_regenerate_cache", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+f"], "command": "python_refactor_restructure", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python"}
+	    ]
+	},
+	{ "keys": ["ctrl+r", "ctrl+m"], "command": "python_generate_modules_cache", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python"}
+	    ]
+	},
+	{ "keys": ["ctrl+alt+space"], "command": "python_manual_completion_request", "context":
+	    [
+	        { "key": "selector", "operator": "equal", "operand": "source.python" }
+	    ]
+	}
+]

@@ -1,0 +1,16 @@
+{
+
+	// just uncomment one of the examples
+	// or write your own command
+
+	// opendiff (FileMerge)
+	// "cmd": ["opendiff", "$file1", "$file2"]
+
+	// ksdiff (Kaleidoscope)
+	// "cmd": ["ksdiff", "$file1", "$file2"]
+
+	// plain old diff - function regex is not working..
+	"cmd": ["diff --ignore-all-space --show-c-function --show-function-line='[[:space:]]*def [a-zA-Z0-9_-]*(.*):[[:space:]]*'", "$file1", "$file2"],
+
+	"open_in_sublime": true
+}

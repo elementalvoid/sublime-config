@@ -1,0 +1,23 @@
+{
+	"auto_upgrade_last_run": null,
+	"installed_packages":
+	[
+		"All Autocomplete",
+		"AutoPEP8",
+		"Crypto",
+		"FileDiffs",
+		"Git",
+		"IPython Integration",
+		"Package Control",
+		"Python Test Runner",
+		"Shell Turtlestein",
+		"SideBarEnhancements",
+		"SublimeBlockCursor",
+		"SublimeCodeIntel",
+		"SublimeRope",
+		"SyncedSideBar",
+		"Theme - Soda",
+		"Vintage Numbers",
+		"VintageEx"
+	]
+}
