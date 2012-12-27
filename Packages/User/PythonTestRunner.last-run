@@ -1,3 +1,0 @@
-{
-	"last_test_run": "rm .coverage; nosetests --config=setup.cfg #service_decorator_uno"
-}
