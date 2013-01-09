@@ -20,5 +20,9 @@
 		"Theme - Soda",
 		"Vintage Numbers",
 		"VintageEx"
+	],
+	"repositories":
+	[
+		"https://github.com/elementalvoid/sublime-text-puppet"
 	]
 }
