@@ -7,6 +7,7 @@
 		"Crypto",
 		"FileDiffs",
 		"Git",
+		"GitGutter",
 		"IPython Integration",
 		"Package Control",
 		"Python Test Runner",
