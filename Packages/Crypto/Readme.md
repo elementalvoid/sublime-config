@@ -1,4 +1,4 @@
-Crypto Sublime Text 2 Package
+Crypto Sublime Text 2 and 3 Package
 =============================
 
 ### Encrypt and Decrypt a document or selection(s) using OpenSSL
@@ -57,7 +57,8 @@ Todo
 
 Author & Contributors
 ----------------------
-[Derek Anderson](http://twitter.com/derekanderson)
+[Derek Anderson](http://twitter.com/derekanderson)  
+[Isaac Muse](https://github.com/facelessuser)
 
 
 License

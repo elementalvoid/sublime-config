@@ -1,69 +1,77 @@
-## coding=utf-8
-import sublime
-import sublime_plugin
-import tempfile
-import subprocess
+# coding=utf-8
 import os
+import sys
 from collections import namedtuple
 import re
-import locale
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
+
+import sublime
+import sublime_plugin
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+
+try:
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "packages_py2")))
+    import sublimeautopep8lib.autopep8 as autopep8
+    from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
+except ImportError:
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "packages_py3")))
+    import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
+    from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread
+    from AutoPEP8.sublimeautopep8lib.common import handle_threads
+
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
-base_name = sublime.platform() == 'windows' and 'AutoPep8 (Windows).sublime-settings' or 'AutoPep8.sublime-settings'
+if sublime.platform() == 'windows':
+    BASE_NAME = 'AutoPep8 (Windows).sublime-settings'
+else:
+    BASE_NAME = 'AutoPep8.sublime-settings'
 
 
-class AutoPep8(object):
-    """AutoPep8 Formatter"""
-
-    def pep8_params(self, preview=True):
-        params = ['-d', '-vv']  # args for preview
-        if not preview:
-            params = ['-i']  # args for format
-
-        # read settings
-        settings = sublime.load_settings(base_name)
-        if settings.get("ignore"):
-            params.append("--ignore=" + settings.get("ignore"))
-        if settings.get("select"):
-            params.append("--select=" + settings.get("select"))
-        return params
-
-    def format_file(self, in_file, out_file, preview=True, encoding='utf-8'):
-        """format/diff code from in_file using autopep8
-        and save output in out_file"""
-
-             # in_file doesn't change
-        open(out_file, 'w').write(open(in_file, 'r').read())
-        settings = sublime.load_settings(base_name)
-        params = [settings.get("python", "python"), settings.get(
-            "autopep8", "autopep8.py"), out_file]
-        params.extend(self.pep8_params(preview))
-        print 'autopep8:', repr(params)
-        p = subprocess.Popen(params, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, cwd=plugin_path)
-        if preview:
-            # write diff to out_file
-            l_encoding = locale.getpreferredencoding()
-            output = p.stdout.read().decode(l_encoding)
-            output = output.replace(out_file, in_file)
-            open(out_file, 'w').write(output.encode('utf-8'))
-        for line in p.stderr:
-            print line
-
-    def format_text(self, text, encoding, preview=True):
-        fd1, in_path = tempfile.mkstemp(text=True)
-        fd2, out_path = tempfile.mkstemp(text=True)
-        fd_in, fd_out = os.fdopen(fd1, 'w'), os.fdopen(fd2)
-        open(in_path, 'w').write(text.encode(encoding))
-        self.format_file(in_path, out_path, preview, encoding)
-        out_data = fd_out.read().decode(encoding)
-        os.remove(in_path)
-        os.remove(out_path)
-        return out_data
+def cfg(key, default=None, view=None):
+    view = view or sublime.active_window().active_view()
+    prj_cfg = view.settings().get("sublimeautopep8", {})
+    glob_cfg = sublime.load_settings(BASE_NAME)
+    return prj_cfg.get(key, glob_cfg.get(key, default))
 
 
-class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
+def cfg_fun(view=None):
+    view = view or sublime.active_window().active_view()
+    prj_cfg = view.settings().get("sublimeautopep8", {})
+    glob_cfg = sublime.load_settings(BASE_NAME)
+    return lambda key, default: prj_cfg.get(key, glob_cfg.get(key, default))
+
+
+def pep8_params():
+    params = ['-d']  # args for preview
+
+    # read settings
+    settings = cfg_fun()
+    # settings = sublime.load_settings(BASE_NAME)
+    for opt in ("ignore", "select", "max-line-length"):
+        params.append("--{0}={1}".format(opt, settings(opt, "")))
+
+    if settings("list-fixes", None):
+        params.append("--{0}={1}".format(opt, settings(opt)))
+
+    for opt in ("verbose", "aggressive"):
+        opt_count = settings(opt, 0)
+        params.extend(["--" + opt] * opt_count)
+
+    # autopep8.parse_args raises exception without it
+    params.append('fake-arg')
+    return autopep8.parse_args(params)[0]
+
+
+class AutoPep8Command(sublime_plugin.TextCommand):
 
     def sel(self):
         sels = self.view.sel()
@@ -74,132 +82,92 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             region = sublime.Region(sel.a, sel.b)
             yield region, self.view.substr(region)
 
-    def get_encoding(self):
-        encoding = self.view.encoding()
-        if encoding and encoding != 'Undefined':
-            return encoding
-        try:
-            return pycoding.search(self.view.substr(sublime.Region(0, self.view.size()))).group(1)
-        except (AttributeError, IndexError):
-            return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
-
-    def new_view(self, edit, encoding, text):
-        view = sublime.active_window().new_file()
-        view.set_encoding(encoding)
-        view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
-        view.insert(edit, 0, text)
-        view.set_scratch(1)
-
     def run(self, edit, preview=True):
-        encoding = self.get_encoding()
-        preview_output = ''
-
-        has_changes = False
-
-        # save cursor position
-        cur_row, cur_col = self.view.rowcol(self.view.sel()[0].begin())
-
-        # save viewport
-        vector = self.view.text_to_layout(self.view.visible_region().begin())
+        max_threads = cfg('max-threads', 5)
+        threads = []
+        queue = Queue()
+        stdoutput = StringIO()
 
         for region, substr in self.sel():
-            out_data = self.format_text(substr, encoding, preview)
-            if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 6):
-                continue
+            args = {'pep8_params': pep8_params(), 'view': self.view,
+                    'filename': self.view.file_name(),
+                    'source': substr,
+                    'preview': preview,
+                    'stdoutput': stdoutput,
+                    'edit': edit, 'region': region}
+            queue.put(args)
+            if len(threads) < max_threads:
+                th = AutoPep8Thread(queue)
+                th.start()
+                threads.append(th)
 
-            has_changes = True
-            if not preview:
-                self.view.replace(edit, region, out_data)
-            else:
-                preview_output += out_data
-
-        if has_changes and preview_output:
-            self.new_view(edit, 'utf-8', preview_output)
-
-        # restore cursor position
-        sel = self.view.sel()
-        if len(sel) == 1 and sel[0].a == sel[0].b:
-            cur_point = self.view.text_point(cur_row, cur_col)
-            sel.subtract(sel[0])
-            sel.add(sublime.Region(cur_point, cur_point))
-
-        # restore viewport
-        self.view.set_viewport_position(
-            (0.0, 0.0))  # magic, next line doesn't work without it
-        self.view.set_viewport_position(vector)
-
-        if has_changes:
-            sublime.status_message('AutoPEP8: Issues fixed')
-        else:
-            sublime.status_message('AutoPEP8: No issues to fix')
+        for _ in range(len(threads)):
+            queue.put(None)
+        if len(threads) > 0:
+            sublime.set_timeout(lambda: handle_threads(threads, preview), 100)
 
     def is_visible(self, *args):
-        return self.view.settings().get('syntax') == "Packages/Python/Python.tmLanguage"
+        view_syntax = self.view.settings().get('syntax')
+        syntax_list = cfg('syntax_list', ["Python"])
+        filename = os.path.basename(view_syntax)
+        return os.path.splitext(filename)[0] in syntax_list
 
 
-class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
+class AutoPep8OutputCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit, text):
+        self.view.insert(edit, 0, text)
+        self.view.end_edit(edit)
+
+    def is_visible(self, *args):
+        return False
+
+
+class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit, text, a, b):
+        region = sublime.Region(int(a), int(b))
+        self.view.replace(edit, region, text)
+
+    def is_visible(self, *args):
+        return False
+
+
+class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 
     file_names = None
-    default_encoding = 'utf-8'
-
-    def get_encoding(self, path):
-        try:
-            with open(path, 'r') as f:
-                file_head = f.readline() + f.readline()
-            return pycoding.search(file_head).group(1)
-        except (AttributeError, IndexError, IOError):
-            return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
-
-    def new_view(self, encoding, text):
-        view = sublime.active_window().new_file()
-        view.set_encoding(encoding)
-        view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
-        edit = view.begin_edit()
-        view.insert(edit, 0, text)
-        view.end_edit(edit)
-        view.set_scratch(1)
 
     def run(self, paths=None, preview=True):
         if not paths:
             return
-
-        has_changes = False
-        preview_output = ''
+        max_threads = cfg('max-threads', 5)
+        threads = []
+        queue = Queue()
 
         for path in self.file_names:
-            encoding = self.get_encoding(path)
-            fd2, out_path = tempfile.mkstemp(text=True)
-            sublime.status_message(
-                "autopep8: formatting {path}".format(path=path))
-            self.format_file(
-                path, out_path, preview=preview, encoding=encoding)
-            in_data = open(path).read()
-            out_data = open(out_path, 'r').read()
-            os.remove(out_path)
-            if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 6):
-                continue
+            stdoutput = StringIO()
+            in_data = open(path, 'r').read()
 
-            has_changes = True
-            if not preview:
-                open(path, 'w').write(out_data)
-            else:
-                preview_output += out_data.decode('utf-8')
+            args = {'pep8_params': pep8_params(), 'filename': path,
+                    'source': in_data, 'preview': preview,
+                    'stdoutput': stdoutput}
 
-        if has_changes:
-            if preview_output:
-                self.new_view('utf-8', preview_output)
-            else:
-                sublime.status_message('AutoPEP8: Issues fixed')
-        else:
-            sublime.status_message('AutoPEP8: No issues to fix')
+            queue.put(args)
+            if len(threads) < max_threads:
+                th = AutoPep8Thread(queue)
+                th.start()
+                threads.append(th)
+
+        for _ in range(len(threads)):
+            queue.put(None)
+        if len(threads) > 0:
+            sublime.set_timeout(lambda: handle_threads(threads, preview), 100)
 
     def files(self, path):
-        result = []
         for dirpath, dirnames, filenames in os.walk(path):
             for filename in filenames:
                 if filename.endswith('py'):
-                    result.append(os.path.join(dirpath, filename))
-        return result
+                    yield os.path.join(dirpath, filename)
 
     def is_visible(self, *args, **kwd):
         paths = kwd.get('paths')
@@ -217,45 +185,18 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
         return True
 
 
-class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
+class AutoPep8Listener(sublime_plugin.EventListener):
 
-    def get_encoding(self, view):
-        encoding = view.encoding()
-        if encoding and encoding != 'Undefined':
-            return encoding
-        try:
-            return pycoding.search(view.substr(sublime.Region(0, view.size()))).group(1)
-        except (AttributeError, IndexError):
-            return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
+    def on_pre_save_async(self, view):
+        if not cfg('format_on_save', False):
+            return
+        view_syntax = view.settings().get('syntax')
+        syntax_list = cfg('syntax_list', ["Python"])
+        if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
+            view.run_command("auto_pep8", {"preview": False})
 
     def on_pre_save(self, view):
-        if not view.settings().get('syntax') == "Packages/Python/Python.tmLanguage" \
-                or not sublime.load_settings(base_name).get('format_on_save', False):
+        if not cfg('format_on_save', False):
             return
-
-        # save cursor position
-        cur_row, cur_col = view.rowcol(view.sel()[0].begin())
-
-        # save viewport
-        vector = view.text_to_layout(view.visible_region().begin())
-
-        encoding = self.get_encoding(view)
-        region = sublime.Region(0, view.size())
-        source = view.substr(region)
-        out_data = self.format_text(source, encoding, preview=False)
-        if out_data != source:
-            edit = view.begin_edit()
-            view.replace(edit, region, out_data)
-            view.end_edit(edit)
-
-            # restore cursor position
-            sel = view.sel()
-            if len(sel) == 1 and sel[0].a == sel[0].b:
-                cur_point = view.text_point(cur_row, cur_col)
-                sel.subtract(sel[0])
-                sel.add(sublime.Region(cur_point, cur_point))
-
-            # restore viewport
-            view.set_viewport_position(
-                (0.0, 0.0))  # magic, next line doesn't work without it
-            view.set_viewport_position(vector)
+        if sublime.version() < '3000':
+            self.on_pre_save_async(view)
