@@ -1,0 +1,34 @@
+{
+	"auto_upgrade_last_run": null,
+	"installed_packages":
+	[
+		"All Autocomplete",
+		"AutoPEP8",
+		"FileDiffs",
+		"Git",
+		"Git Config",
+		"GitGutter",
+		"Indent XML",
+		"Markdown Preview",
+		"Package Control",
+		"PgSQL",
+		"Puppet",
+		"Python IDE",
+		"Python Test Runner",
+		"SideBarEnhancements",
+		"SideBarGit",
+		"SublimeLinter",
+		"Theme - Soda",
+		"Themr",
+		"Vintageous"
+	],
+	"repositories":
+	[
+		"https://sublime.wbond.net/alpha/packages.json",
+		"https://github.com/lunixbochs/sublimelint/tree/st3",
+		"https://github.com/SublimeText/SideBarGit/tree/st3",
+		"https://github.com/titoBouzout/SideBarEnhancements/tree/st3",
+		"https://github.com/kemayo/sublime-text-2-git/tree/python3",
+		"https://github.com/SublimeLinter/SublimeLinter/tree/sublime-text-3"
+	]
+}
