@@ -1,15 +1,11 @@
 Crypto Sublime Text 2 and 3 Package
 =============================
 
-### Encrypt and Decrypt a document or selection(s) using OpenSSL
+### Encrypt/ Decrypt a document or selection(s) using OpenSSL
 
 This Package depends on `openssl`
 
-
-Screenshots
---------
-![Preview](https://github.com/mediaupstream/SublimeText-Crypto/raw/master/screenshots/Crypto_screenshot.png "Before Encryption") ![Preview](https://github.com/mediaupstream/SublimeText-Crypto/raw/master/screenshots/Crypto_encrypted_screenshot.png "After Encryption")  
-
+![Preview](https://github.com/mediaupstream/SublimeText-Crypto/raw/master/screenshots/Crypto2.gif)
 
 Install
 -------
